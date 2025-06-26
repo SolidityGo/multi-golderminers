@@ -59,7 +59,7 @@ export class GameEngine {
   }
 
   // 更新钩子发射状态
-  updateHookFiring(hook: Hook, deltaTime: number, gameObjects: GameObject[]): Hook {
+  updateHookFiring(hook: Hook, deltaTime: number, gameObjects: GameObject[], onObjectCollected?: (objectId: string) => void): Hook {
     if (!hook.isFiring) return hook;
 
     // 计算钩子尖端位置
@@ -84,6 +84,9 @@ export class GameEngine {
     // 检查碰撞
     const collidedObject = this.checkCollision(hookTipX, hookTipY, gameObjects);
     if (collidedObject) {
+      // 立即触发物品收集回调，使物品在被抓住的瞬间就消失
+      onObjectCollected?.(collidedObject.id);
+      
       return {
         ...hook,
         isFiring: false,
@@ -177,19 +180,18 @@ export class GameEngine {
 
     // 根据钩子状态更新
     if (updatedHook.isFiring) {
-      updatedHook = this.updateHookFiring(updatedHook, deltaTime, gameObjects);
+      updatedHook = this.updateHookFiring(updatedHook, deltaTime, gameObjects, onObjectCollected);
     } else if (updatedHook.isRetracting) {
       const prevHook = { ...updatedHook };
       updatedHook = this.updateHookRetracting(updatedHook, deltaTime);
       
-      // 检查是否完成回收并有抓取物体
+      // 检查是否完成回收并有抓取物体 - 只计算分数，不再触发物品收集
       if (!updatedHook.isRetracting && prevHook.caughtObject) {
         const score = this.calculateScore(prevHook.caughtObject);
         updatedScore += score;
         
-        // 触发回调
+        // 只触发分数更新回调
         onScoreUpdate?.(updatedScore);
-        onObjectCollected?.(prevHook.caughtObject.id);
       }
     } else {
       // 摆动状态

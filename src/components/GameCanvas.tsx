@@ -277,7 +277,7 @@ export const GameCanvas: React.FC<GameCanvasProps> = ({ walletAddress }) => {
         syncScoreUpdate(score);
       },
       (objectId) => {
-        // 同步物体收集
+        // 同步物体收集（syncObjectCollected内部会更新本地状态）
         syncObjectCollected(objectId);
       }
     );

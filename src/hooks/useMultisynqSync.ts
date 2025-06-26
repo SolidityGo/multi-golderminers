@@ -291,8 +291,10 @@ export const useMultisynqSync = (walletAddress?: string) => {
 
   // 同步物体收集
   const syncObjectCollected = (objectId: string) => {
+    // 立即更新本地游戏状态
     updateGameObject(objectId, { isCollected: true });
     
+    // 广播给其他玩家
     broadcastMessage({
       type: 'OBJECT_COLLECTED',
       payload: { objectId },
