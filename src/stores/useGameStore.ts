@@ -78,7 +78,7 @@ export const useGameStore = create<GameState>()((set, _get) => ({
     canvasWidth: 800,
     canvasHeight: 600,
     gravity: 0.5,
-    hookSpeed: 5,
+    hookSpeed: 200, // 像素/秒
     maxHookLength: 400,
   },
   
@@ -91,7 +91,18 @@ export const useGameStore = create<GameState>()((set, _get) => ({
     const newPlayers = new Map(state.players);
     const existingPlayer = newPlayers.get(playerId);
     if (existingPlayer) {
-      newPlayers.set(playerId, { ...existingPlayer, ...updates });
+      const updatedPlayer = { ...existingPlayer, ...updates };
+      newPlayers.set(playerId, updatedPlayer);
+      
+      // 如果更新的是当前玩家，也要更新 currentPlayer
+      const newCurrentPlayer = state.currentPlayer?.id === playerId 
+        ? updatedPlayer 
+        : state.currentPlayer;
+      
+      return { 
+        players: newPlayers,
+        currentPlayer: newCurrentPlayer 
+      };
     }
     return { players: newPlayers };
   }),

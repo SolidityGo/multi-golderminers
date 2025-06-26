@@ -11,8 +11,7 @@ interface GameCanvasProps {
 
 export const GameCanvas: React.FC<GameCanvasProps> = ({ walletAddress }) => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
-  const engineRef = useRef<GameEngine>(new GameEngine(DEFAULT_GAME_CONFIG));
-
+  
   const {
     currentPlayer,
     players,
@@ -21,6 +20,17 @@ export const GameCanvas: React.FC<GameCanvasProps> = ({ walletAddress }) => {
     updatePlayer,
     setGameObjects
   } = useGameStore();
+
+  // 使用gameSettings初始化游戏引擎
+  const engineRef = useRef<GameEngine>(new GameEngine({
+    canvasWidth: gameSettings.canvasWidth,
+    canvasHeight: gameSettings.canvasHeight,
+    gravity: gameSettings.gravity,
+    hookSpeed: gameSettings.hookSpeed,
+    maxHookLength: gameSettings.maxHookLength,
+    hookSwingSpeed: 1,
+    retractSpeed: 150,
+  }));
 
   const {
     syncHookUpdate,
@@ -283,11 +293,20 @@ export const GameCanvas: React.FC<GameCanvasProps> = ({ walletAddress }) => {
 
   // 处理点击事件
   const handleClick = useCallback(() => {
-    if (!currentPlayer) return;
+    if (!currentPlayer) {
+      console.log('当前玩家未初始化，无法发射钩子');
+      return;
+    }
+    
+    console.log('点击发射钩子，当前状态:', currentPlayer.hook);
     
     const updatedHook = engineRef.current.handleInput(currentPlayer.hook, 'fire');
+    console.log('更新后钩子状态:', updatedHook);
+    
     if (updatedHook !== currentPlayer.hook) {
-      updatePlayer(currentPlayer.id, { hook: updatedHook });
+      // 直接更新当前玩家的完整状态
+      const updatedPlayer = { ...currentPlayer, hook: updatedHook };
+      updatePlayer(currentPlayer.id, updatedPlayer);
       syncHookUpdate(updatedHook);
     }
   }, [currentPlayer, updatePlayer, syncHookUpdate]);

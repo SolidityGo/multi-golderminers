@@ -44,6 +44,7 @@ export const useMultisynqSync = (walletAddress?: string) => {
     updateGameObject,
     setGameObjects,
     setRoomId,
+    setGameStarted,
     roomId
   } = useGameStore();
 
@@ -108,7 +109,7 @@ export const useMultisynqSync = (walletAddress?: string) => {
           isFiring: false,
           isRetracting: false,
           caughtObject: null,
-          x: 400, // 默认中心位置
+          x: 400, // 画布中心位置 (800/2)
           y: 100,
         },
         color: generatePlayerColor(walletAddress),
@@ -120,6 +121,9 @@ export const useMultisynqSync = (walletAddress?: string) => {
       // 初始化游戏物体
       const objects = generateInitialObjects();
       setGameObjects(objects);
+      
+      // 开始游戏
+      setGameStarted(true);
       
       setupRoomListeners(room);
       
@@ -162,13 +166,16 @@ export const useMultisynqSync = (walletAddress?: string) => {
           isFiring: false,
           isRetracting: false,
           caughtObject: null,
-          x: 400,
+          x: 400, // 画布中心位置 (800/2)
           y: 100,
         },
         color: generatePlayerColor(walletAddress),
       };
       
       setCurrentPlayer(player);
+      
+      // 开始游戏
+      setGameStarted(true);
       
       setupRoomListeners(room);
       

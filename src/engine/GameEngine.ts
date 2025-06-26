@@ -27,7 +27,18 @@ export class GameEngine {
       const swingAmplitude = Math.PI / 4; // 45度摆动范围
       const swingFrequency = 1; // 摆动频率
       
-      hook.angle = Math.sin(time * swingFrequency) * swingAmplitude;
+      const newAngle = Math.sin(time * swingFrequency) * swingAmplitude;
+      
+      // 计算钩子尖端位置
+      const hookTipX = this.config.canvasWidth / 2 + Math.sin(newAngle) * hook.length;
+      const hookTipY = 100 + Math.cos(newAngle) * hook.length;
+      
+      return {
+        ...hook,
+        angle: newAngle,
+        x: hookTipX,
+        y: hookTipY,
+      };
     }
     
     return hook;
