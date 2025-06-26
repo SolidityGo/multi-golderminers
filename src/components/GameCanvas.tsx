@@ -2,7 +2,7 @@
 
 import React, { useRef, useEffect, useCallback } from 'react';
 import { useGameStore, GameObject, Player, generateRandomObjects } from '../stores/useGameStore';
-import { GameEngine, DEFAULT_GAME_CONFIG } from '../engine/GameEngine';
+import { GameEngine } from '../engine/GameEngine';
 import { useMultisynqSync } from '../hooks/useMultisynqSync';
 
 interface GameCanvasProps {
