@@ -21,7 +21,7 @@ export class GameEngine {
   }
 
   // 更新钩子摆动
-  updateHookSwing(hook: Hook, deltaTime: number): Hook {
+  updateHookSwing(hook: Hook, deltaTime: number, playerX?: number, playerY?: number): Hook {
     if (!hook.isFiring && !hook.isRetracting) {
       // 累加摆动时间
       this.swingTime += deltaTime;
@@ -34,8 +34,10 @@ export class GameEngine {
       const newAngle = Math.sin(this.swingTime * swingFrequency) * swingAmplitude;
       
       // 计算钩子尖端位置
-      const hookTipX = this.config.canvasWidth / 2 + Math.sin(newAngle) * hook.length;
-      const hookTipY = 100 + Math.cos(newAngle) * hook.length;
+      const startX = playerX ?? this.config.canvasWidth / 2;
+      const startY = playerY ?? 100;
+      const hookTipX = startX + Math.sin(newAngle) * hook.length;
+      const hookTipY = startY + Math.cos(newAngle) * hook.length;
       
       return {
         ...hook,

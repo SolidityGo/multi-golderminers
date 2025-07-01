@@ -5,6 +5,7 @@ import { useGameStore, GameObject, Player, generateRandomObjects } from '../stor
 import { GameEngine } from '../engine/GameEngine';
 import { useMultisynqSync } from '../hooks/useMultisynqSync';
 import { preloadGameAssets, GameAssets, validateAssets } from '../utils/AssetLoader';
+import { drawCharacter, drawPlayerLabel, calculatePlayerPosition } from '../utils/CharacterGenerator';
 
 interface GameCanvasProps {
   walletAddress?: string;
@@ -223,10 +224,10 @@ export const GameCanvas: React.FC<GameCanvasProps> = ({ walletAddress }) => {
   }, [gameAssets, assetsLoaded]);
 
   // 绘制钩子（使用新的钩子图片并支持旋转）
-  const drawHook = useCallback((ctx: CanvasRenderingContext2D, player: Player) => {
+  const drawHook = useCallback((ctx: CanvasRenderingContext2D, player: Player, customStartX?: number, customStartY?: number) => {
     const { hook, color } = player;
-    const startX = gameSettings.canvasWidth / 2;
-    const startY = 100;
+    const startX = customStartX ?? gameSettings.canvasWidth / 2;
+    const startY = customStartY ?? 100;
     
     ctx.save();
     
@@ -439,18 +440,63 @@ export const GameCanvas: React.FC<GameCanvasProps> = ({ walletAddress }) => {
     ctx.restore();
   }, [gameAssets, assetsLoaded]);
 
-  // 绘制其他玩家
-  const drawOtherPlayers = useCallback((ctx: CanvasRenderingContext2D, otherPlayers: Player[]) => {
-    otherPlayers.forEach(player => {
-      if (!currentPlayer || player.id === currentPlayer.id) return;
+  // 绘制所有玩家角色
+  const drawAllPlayers = useCallback((ctx: CanvasRenderingContext2D) => {
+    const allPlayers = Array.from(players.values()) as Player[];
+    
+    // 按照玩家ID排序，保证位置稳定
+    allPlayers.sort((a, b) => a.id.localeCompare(b.id));
+    
+    allPlayers.forEach((player, index) => {
+      const position = calculatePlayerPosition(
+        index,
+        allPlayers.length,
+        gameSettings.canvasWidth,
+        gameSettings.canvasHeight
+      );
       
-      // 使用半透明绘制其他玩家的钩子
-      ctx.save();
-      ctx.globalAlpha = 0.7;
-      drawHook(ctx, player);
-      ctx.restore();
+      // 更新玩家位置（如果改变了）
+      if (!player.position || player.position.x !== position.x || player.position.y !== position.y) {
+        updatePlayer(player.id, { position: { x: position.x, y: position.y } });
+      }
+      
+      // 绘制角色
+      if (player.character) {
+        console.log(`Drawing character for player ${player.name} at position:`, position);
+        drawCharacter(
+          ctx,
+          player.character,
+          position,
+          currentPlayer?.id === player.id
+        );
+      } else {
+        console.warn('Player missing character data:', player.id);
+      }
+      
+      // 绘制名称标签
+      drawPlayerLabel(
+        ctx,
+        player.name,
+        position,
+        currentPlayer?.id === player.id
+      );
+      
+      // 更新钩子起始位置为角色位置
+      const hookStartX = position.x;
+      const hookStartY = position.y - 10; // 角色手部位置
+      
+      // 绘制钩子（从角色位置出发）
+      if (currentPlayer?.id === player.id) {
+        drawHook(ctx, player, hookStartX, hookStartY);
+      } else {
+        // 其他玩家的钩子使用半透明
+        ctx.save();
+        ctx.globalAlpha = 0.7;
+        drawHook(ctx, player, hookStartX, hookStartY);
+        ctx.restore();
+      }
     });
-  }, [currentPlayer, drawHook]);
+  }, [players, currentPlayer, gameSettings, drawHook, updatePlayer]);
 
   // 绘制加载屏幕
   const drawLoadingScreen = useCallback((ctx: CanvasRenderingContext2D) => {
@@ -523,15 +569,13 @@ export const GameCanvas: React.FC<GameCanvasProps> = ({ walletAddress }) => {
     // 绘制游戏物体
     drawGameObjects(ctx, gameObjects);
     
-    // 绘制当前玩家的钩子
+    // 绘制所有玩家角色和钩子
+    drawAllPlayers(ctx);
+    
+    // 绘制当前玩家信息（分数等）
     if (currentPlayer) {
-      drawHook(ctx, currentPlayer);
       drawPlayerInfo(ctx, currentPlayer);
     }
-    
-    // 绘制其他玩家
-    const otherPlayers = Array.from(players.values()) as Player[];
-    drawOtherPlayers(ctx, otherPlayers);
     
   }, [
     gameSettings,
@@ -541,10 +585,8 @@ export const GameCanvas: React.FC<GameCanvasProps> = ({ walletAddress }) => {
     drawGameObjects,
     gameObjects,
     currentPlayer,
-    drawHook,
     drawPlayerInfo,
-    players,
-    drawOtherPlayers
+    drawAllPlayers
   ]);
 
   // 游戏更新循环

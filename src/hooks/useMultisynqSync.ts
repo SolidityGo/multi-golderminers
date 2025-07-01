@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { useGameStore, Player, GameObject } from '../stores/useGameStore';
+import { generateCharacterAppearance } from '../utils/CharacterGenerator';
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 type AnyData = any;
@@ -113,6 +114,7 @@ export const useMultisynqSync = (walletAddress?: string) => {
           y: 100,
         },
         color: generatePlayerColor(walletAddress),
+        character: generateCharacterAppearance(walletAddress),
       };
       
       setCurrentPlayer(player);
@@ -170,6 +172,7 @@ export const useMultisynqSync = (walletAddress?: string) => {
           y: 100,
         },
         color: generatePlayerColor(walletAddress),
+        character: generateCharacterAppearance(walletAddress),
       };
       
       setCurrentPlayer(player);

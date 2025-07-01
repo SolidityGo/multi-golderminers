@@ -1,0 +1,190 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Character Generator Test</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            padding: 20px;
+            background: #f0f0f0;
+        }
+        canvas {
+            border: 1px solid #ccc;
+            background: white;
+            margin: 10px;
+        }
+        .character-card {
+            display: inline-block;
+            margin: 10px;
+            padding: 10px;
+            background: white;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+    </style>
+</head>
+<body>
+    <h1>Character Generator Test</h1>
+    <div id="characters"></div>
+
+    <script type="module">
+        // Copy the character generation logic
+        function generateCharacterAppearance(walletAddress) {
+            const seed = walletAddress.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0);
+            const random = (index) => {
+                const x = Math.sin(seed * index) * 10000;
+                return x - Math.floor(x);
+            };
+
+            const skinColors = ['#FDBCB4', '#F5DEB3', '#FFE4B5', '#D2B48C', '#8D5524', '#C68642'];
+            const hairColors = ['#000000', '#4B3621', '#8B4513', '#FFD700', '#DC143C', '#800080'];
+            const shirtColors = ['#FF6B6B', '#4ECDC4', '#45B7D1', '#FFA07A', '#98D8C8', '#F7DC6F'];
+            const pantsColors = ['#2C3E50', '#34495E', '#7F8C8D', '#5D4E37', '#3B5998', '#8B4513'];
+            const hatColors = ['#FFD700', '#FF6347', '#4169E1', '#32CD32', '#FF1493', '#00CED1'];
+            const hairStyles = ['short', 'long', 'spiky', 'bald'];
+            const hatTypes = ['mining', 'cap', 'none'];
+
+            return {
+                skinColor: skinColors[Math.floor(random(1) * skinColors.length)],
+                hairColor: hairColors[Math.floor(random(2) * hairColors.length)],
+                hairStyle: hairStyles[Math.floor(random(3) * hairStyles.length)],
+                shirtColor: shirtColors[Math.floor(random(4) * shirtColors.length)],
+                pantsColor: pantsColors[Math.floor(random(5) * pantsColors.length)],
+                hatType: hatTypes[Math.floor(random(6) * hatTypes.length)],
+                hatColor: hatColors[Math.floor(random(7) * hatColors.length)],
+            };
+        }
+
+        function drawCharacter(ctx, appearance, x, y) {
+            ctx.save();
+            ctx.translate(x, y);
+            ctx.scale(2, 2);
+
+            // Body
+            ctx.fillStyle = appearance.shirtColor;
+            ctx.fillRect(-15, -30, 30, 35);
+
+            // Arms
+            ctx.fillStyle = appearance.skinColor;
+            ctx.fillRect(-20, -25, 8, 25);
+            ctx.fillRect(12, -25, 8, 20);
+
+            // Legs
+            ctx.fillStyle = appearance.pantsColor;
+            ctx.fillRect(-10, 5, 8, 20);
+            ctx.fillRect(2, 5, 8, 20);
+
+            // Shoes
+            ctx.fillStyle = '#333333';
+            ctx.fillRect(-12, 23, 10, 5);
+            ctx.fillRect(2, 23, 10, 5);
+
+            // Head
+            ctx.fillStyle = appearance.skinColor;
+            ctx.beginPath();
+            ctx.arc(0, -45, 15, 0, Math.PI * 2);
+            ctx.fill();
+
+            // Hair
+            if (appearance.hairStyle !== 'bald') {
+                ctx.fillStyle = appearance.hairColor;
+                switch (appearance.hairStyle) {
+                    case 'short':
+                        ctx.beginPath();
+                        ctx.arc(0, -50, 15, Math.PI, 0);
+                        ctx.fill();
+                        break;
+                    case 'long':
+                        ctx.beginPath();
+                        ctx.arc(0, -50, 15, Math.PI, 0);
+                        ctx.fill();
+                        ctx.fillRect(-15, -50, 30, 10);
+                        break;
+                    case 'spiky':
+                        for (let i = -12; i <= 12; i += 6) {
+                            ctx.beginPath();
+                            ctx.moveTo(i, -55);
+                            ctx.lineTo(i - 2, -65);
+                            ctx.lineTo(i + 2, -65);
+                            ctx.closePath();
+                            ctx.fill();
+                        }
+                        break;
+                }
+            }
+
+            // Hat
+            if (appearance.hatType !== 'none') {
+                ctx.fillStyle = appearance.hatColor;
+                switch (appearance.hatType) {
+                    case 'mining':
+                        ctx.beginPath();
+                        ctx.arc(0, -55, 18, Math.PI, 0);
+                        ctx.fill();
+                        ctx.fillRect(-18, -55, 36, 5);
+                        ctx.fillStyle = '#FFFF00';
+                        ctx.beginPath();
+                        ctx.arc(0, -60, 4, 0, Math.PI * 2);
+                        ctx.fill();
+                        break;
+                    case 'cap':
+                        ctx.beginPath();
+                        ctx.arc(0, -55, 15, Math.PI, 0);
+                        ctx.fill();
+                        ctx.fillRect(-20, -55, 40, 3);
+                        break;
+                }
+            }
+
+            // Eyes
+            ctx.fillStyle = '#000000';
+            ctx.beginPath();
+            ctx.arc(-5, -45, 2, 0, Math.PI * 2);
+            ctx.arc(5, -45, 2, 0, Math.PI * 2);
+            ctx.fill();
+
+            // Smile
+            ctx.strokeStyle = '#000000';
+            ctx.lineWidth = 1;
+            ctx.beginPath();
+            ctx.arc(0, -40, 5, 0, Math.PI);
+            ctx.stroke();
+
+            ctx.restore();
+        }
+
+        // Generate test characters
+        const container = document.getElementById('characters');
+        const testAddresses = [
+            '0x1234567890abcdef',
+            '0xabcdef1234567890',
+            '0x9876543210fedcba',
+            '0xfedcba0987654321',
+            '0xdeadbeef12345678',
+            '0x8765432100000000'
+        ];
+
+        testAddresses.forEach((address, index) => {
+            const card = document.createElement('div');
+            card.className = 'character-card';
+            
+            const canvas = document.createElement('canvas');
+            canvas.width = 150;
+            canvas.height = 200;
+            
+            const ctx = canvas.getContext('2d');
+            const appearance = generateCharacterAppearance(address);
+            
+            drawCharacter(ctx, appearance, 75, 100);
+            
+            const label = document.createElement('p');
+            label.textContent = `Player ${index + 1}`;
+            label.style.textAlign = 'center';
+            
+            card.appendChild(canvas);
+            card.appendChild(label);
+            container.appendChild(card);
+        });
+    </script>
+</body>
+</html>

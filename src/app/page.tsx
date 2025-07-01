@@ -7,11 +7,21 @@ import { Leaderboard } from '../components/Leaderboard';
 import { WalletConnectButton } from '../components/WalletConnectButton';
 import { useGameStore } from '../stores/useGameStore';
 import { useAccount } from 'wagmi';
+import { generateCharacterAppearance } from '../utils/CharacterGenerator';
 
 export default function HomePage() {
   const [isGameStarted, setIsGameStarted] = useState(false);
   const { currentPlayer, players, addPlayer, setCurrentPlayer } = useGameStore();
   const { address, isConnected } = useAccount();
+  
+  // Debug mode - check URL params
+  const [isDebugMode, setIsDebugMode] = useState(false);
+  
+  useEffect(() => {
+    // Check if debug mode is enabled via URL parameter
+    const params = new URLSearchParams(window.location.search);
+    setIsDebugMode(params.get('debug') === 'true');
+  }, []);
 
 
   // 处理开始游戏
@@ -22,17 +32,20 @@ export default function HomePage() {
 
   // 当钱包连接状态改变时，自动创建或更新玩家
   useEffect(() => {
-    if (isConnected && address && !currentPlayer) {
+    if (isDebugMode && !currentPlayer) {
+      // Debug mode - create mock player
+      const mockAddress = '0xdebug' + Math.random().toString(36).substr(2, 9);
       const newPlayer = {
-        id: address,
-        address: address,
-        name: `矿工${address.slice(-4)}`,
+        id: mockAddress,
+        address: mockAddress,
+        name: `调试矿工${mockAddress.slice(-4)}`,
         score: 0,
         color: `hsl(${Math.random() * 360}, 70%, 50%)`,
+        character: generateCharacterAppearance(mockAddress),
         hook: {
           x: 400,
           y: 100,
-          length: 0,
+          length: 50,
           angle: 0,
           isFiring: false,
           isRetracting: false,
@@ -41,10 +54,30 @@ export default function HomePage() {
       };
       addPlayer(newPlayer);
       setCurrentPlayer(newPlayer);
-    } else if (!isConnected && currentPlayer) {
+    } else if (isConnected && address && !currentPlayer) {
+      const newPlayer = {
+        id: address,
+        address: address,
+        name: `矿工${address.slice(-4)}`,
+        score: 0,
+        color: `hsl(${Math.random() * 360}, 70%, 50%)`,
+        character: generateCharacterAppearance(address),
+        hook: {
+          x: 400,
+          y: 100,
+          length: 50,
+          angle: 0,
+          isFiring: false,
+          isRetracting: false,
+          caughtObject: null,
+        },
+      };
+      addPlayer(newPlayer);
+      setCurrentPlayer(newPlayer);
+    } else if (!isConnected && !isDebugMode && currentPlayer) {
       setCurrentPlayer(null);
     }
-  }, [isConnected, address, currentPlayer, addPlayer, setCurrentPlayer]);
+  }, [isConnected, address, currentPlayer, addPlayer, setCurrentPlayer, isDebugMode]);
 
 
   if (!isGameStarted) {
@@ -61,7 +94,16 @@ export default function HomePage() {
                 </h1>
                 <span className="text-2xl">💎</span>
               </div>
-              <WalletConnectButton />
+              {isDebugMode ? (
+                <button
+                  onClick={() => window.location.reload()}
+                  className="px-4 py-2 bg-purple-600 text-white rounded-lg font-bold"
+                >
+                  🐛 调试模式
+                </button>
+              ) : (
+                <WalletConnectButton />
+              )}
             </div>
           </div>
         </nav>
@@ -91,15 +133,15 @@ export default function HomePage() {
                   <p className="text-gray-600">连接钱包后即可开始游戏</p>
                 </div>
 
-                {isConnected && address ? (
+                {(isConnected && address) || isDebugMode ? (
                   <div className="text-center space-y-4">
                     <div className="bg-green-50 border-2 border-green-200 rounded-lg p-4">
                       <div className="flex items-center justify-center space-x-2 text-green-700">
                         <span className="text-xl">✅</span>
-                        <span className="font-semibold">钱包已连接</span>
+                        <span className="font-semibold">{isDebugMode ? '调试模式已启用' : '钱包已连接'}</span>
                       </div>
                       <p className="text-sm text-green-600 mt-1">
-                        地址: {address.slice(0, 6)}...{address.slice(-4)}
+                        {isDebugMode ? '调试地址: debug' : `地址: ${address?.slice(0, 6)}...${address?.slice(-4)}`}
                       </p>
                     </div>
                     
@@ -159,7 +201,7 @@ export default function HomePage() {
             {/* 右侧：排行榜和房间信息 */}
             <div className="space-y-6">
               <Leaderboard />
-              <RoomLobby />
+              <RoomLobby walletAddress={isDebugMode ? currentPlayer?.address : address} />
             </div>
           </div>
         </main>
@@ -210,7 +252,7 @@ export default function HomePage() {
           {/* 游戏画布 - 占据主要空间 */}
           <div className="xl:col-span-3">
             <div className="bg-white rounded-2xl shadow-2xl p-4 border-2 border-amber-200">
-              <GameCanvas walletAddress={address} />
+              <GameCanvas walletAddress={isDebugMode ? currentPlayer?.address : address} />
             </div>
           </div>
           

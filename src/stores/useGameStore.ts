@@ -1,4 +1,5 @@
 import { create } from 'zustand';
+import { CharacterAppearance, generateCharacterAppearance } from '../utils/CharacterGenerator';
 
 // 游戏物体类型
 export interface GameObject {
@@ -31,6 +32,8 @@ export interface Player {
   score: number;
   hook: Hook;
   color: string;
+  character: CharacterAppearance;
+  position?: { x: number; y: number }; // 玩家在画布上的位置
 }
 
 // 游戏状态
