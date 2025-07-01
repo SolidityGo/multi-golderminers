@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { useGameStore, Player, GameObject } from '../stores/useGameStore';
 import { generateCharacterAppearance } from '../utils/CharacterGenerator';
+import { sendToOtherTabs, registerRoomHandlers, cleanupRoomHandlers } from '../utils/MockMultisynqBridge';
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 type AnyData = any;
@@ -344,29 +345,140 @@ const generateInitialObjects = (): GameObject[] => {
   return []; // 临时返回空数组，实际应该调用generateRandomObjects
 };
 
+// 全局房间管理器（用于模拟多人同步）
+const globalRooms = new Map<string, {
+  players: Set<string>;
+  messageHandlers: Map<string, (data: AnyData, senderId: string) => void>;
+  joinHandlers: Map<string, (userId: string) => void>;
+  leaveHandlers: Map<string, (userId: string) => void>;
+}>();
+
 // 模拟函数（实际项目中应该被真实的Multisynq API替换）
 const mockCreateRoom = async (roomId?: string): Promise<MultisynqRoom> => {
   const finalRoomId = roomId || `room_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+  const playerId = `player_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+  
   return new Promise((resolve) => {
     setTimeout(() => {
+      // 创建或获取房间
+      if (!globalRooms.has(finalRoomId)) {
+        globalRooms.set(finalRoomId, {
+          players: new Set(),
+          messageHandlers: new Map(),
+          joinHandlers: new Map(),
+          leaveHandlers: new Map()
+        });
+      }
+      
+      const room = globalRooms.get(finalRoomId)!;
+      room.players.add(playerId);
+      
       resolve({
         id: finalRoomId,
-        broadcast: (data: AnyData) => console.log('Broadcasting:', data),
-        onMessage: (_callback: (data: AnyData, senderId: string) => void) => {
-          // 模拟消息监听
+        broadcast: (data: AnyData) => {
+          console.log('Broadcasting:', data);
+          // 广播给房间内所有其他玩家
+          room.messageHandlers.forEach((handler, id) => {
+            if (id !== playerId) {
+              handler(data, playerId);
+            }
+          });
         },
-        onUserJoin: (_callback: (userId: string) => void) => {
-          // 模拟用户加入监听
+        onMessage: (callback: (data: AnyData, senderId: string) => void) => {
+          room.messageHandlers.set(playerId, callback);
         },
-        onUserLeave: (_callback: (userId: string) => void) => {
-          // 模拟用户离开监听
+        onUserJoin: (callback: (userId: string) => void) => {
+          room.joinHandlers.set(playerId, callback);
+          // 通知现有玩家
+          room.players.forEach(existingPlayerId => {
+            if (existingPlayerId !== playerId) {
+              callback(existingPlayerId);
+            }
+          });
         },
-        leave: () => console.log('Leaving room'),
+        onUserLeave: (callback: (userId: string) => void) => {
+          room.leaveHandlers.set(playerId, callback);
+        },
+        leave: () => {
+          console.log('Leaving room');
+          room.players.delete(playerId);
+          room.messageHandlers.delete(playerId);
+          room.joinHandlers.delete(playerId);
+          room.leaveHandlers.delete(playerId);
+          
+          // 通知其他玩家
+          room.leaveHandlers.forEach((handler, id) => {
+            if (id !== playerId) {
+              handler(playerId);
+            }
+          });
+        },
       });
     }, 1000);
   });
 };
 
 const mockJoinRoom = async (roomId: string): Promise<MultisynqRoom> => {
-  return mockCreateRoom(roomId);
+  const playerId = `player_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+  
+  return new Promise((resolve) => {
+    setTimeout(() => {
+      if (!globalRooms.has(roomId)) {
+        throw new Error(`Room ${roomId} does not exist`);
+      }
+      
+      const room = globalRooms.get(roomId)!;
+      
+      // 通知现有玩家有新玩家加入
+      room.joinHandlers.forEach((handler, id) => {
+        if (id !== playerId) {
+          handler(playerId);
+        }
+      });
+      
+      room.players.add(playerId);
+      
+      resolve({
+        id: roomId,
+        broadcast: (data: AnyData) => {
+          console.log('Broadcasting:', data);
+          // 广播给房间内所有其他玩家
+          room.messageHandlers.forEach((handler, id) => {
+            if (id !== playerId) {
+              handler(data, playerId);
+            }
+          });
+        },
+        onMessage: (callback: (data: AnyData, senderId: string) => void) => {
+          room.messageHandlers.set(playerId, callback);
+        },
+        onUserJoin: (callback: (userId: string) => void) => {
+          room.joinHandlers.set(playerId, callback);
+          // 立即通知新玩家现有的所有玩家
+          room.players.forEach(existingPlayerId => {
+            if (existingPlayerId !== playerId) {
+              callback(existingPlayerId);
+            }
+          });
+        },
+        onUserLeave: (callback: (userId: string) => void) => {
+          room.leaveHandlers.set(playerId, callback);
+        },
+        leave: () => {
+          console.log('Leaving room');
+          room.players.delete(playerId);
+          room.messageHandlers.delete(playerId);
+          room.joinHandlers.delete(playerId);
+          room.leaveHandlers.delete(playerId);
+          
+          // 通知其他玩家
+          room.leaveHandlers.forEach((handler, id) => {
+            if (id !== playerId) {
+              handler(playerId);
+            }
+          });
+        },
+      });
+    }, 1000);
+  });
 }; 

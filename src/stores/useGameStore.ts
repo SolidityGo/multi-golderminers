@@ -72,7 +72,7 @@ interface GameState {
   resetGame: () => void;
 }
 
-export const useGameStore = create<GameState>()((set, _get) => ({
+export const useGameStore = create<GameState>()((set, get) => ({
   currentPlayer: null,
   players: new Map(),
   gameObjects: [],
@@ -171,4 +171,9 @@ export const generateRandomObjects = (count: number = 20): GameObject[] => {
   }
   
   return objects;
-}; 
+};
+
+// 在开发环境下，将 store 暴露到 window 对象以便调试
+if (typeof window !== 'undefined' && process.env.NODE_ENV === 'development') {
+  (window as any).useGameStore = useGameStore;
+} 

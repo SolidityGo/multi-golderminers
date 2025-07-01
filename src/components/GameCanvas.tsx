@@ -6,6 +6,7 @@ import { GameEngine } from '../engine/GameEngine';
 import { useMultisynqSync } from '../hooks/useMultisynqSync';
 import { preloadGameAssets, GameAssets, validateAssets } from '../utils/AssetLoader';
 import { drawCharacter, drawPlayerLabel, calculatePlayerPosition } from '../utils/CharacterGenerator';
+import { drawGameObject, drawObjectShadow, drawSparkle } from '../utils/GameObjectRenderer';
 
 interface GameCanvasProps {
   walletAddress?: string;
@@ -135,93 +136,48 @@ export const GameCanvas: React.FC<GameCanvasProps> = ({ walletAddress }) => {
     }
   }, [gameSettings, gameAssets, assetsLoaded]);
 
-  // 绘制游戏物体（使用图片素材）
+  // 绘制游戏物体（使用代码生成的精美图形）
   const drawGameObjects = useCallback((ctx: CanvasRenderingContext2D, objects: GameObject[]) => {
+    // 获取当前时间用于动画效果
+    const time = Date.now();
+    
     objects.forEach(obj => {
       if (obj.isCollected) return;
       
       ctx.save();
       
-      let img: HTMLImageElement | null = null;
-      let fallbackColor = '#FFD700';
+      // 绘制阴影
+      drawObjectShadow(ctx, obj.x, obj.y, obj.size);
       
-      // 根据物体类型选择对应的图片
-      if (gameAssets && assetsLoaded) {
-        switch (obj.type) {
-          case 'gold':
-            img = gameAssets.goldNugget;
-            fallbackColor = '#FFD700';
-            break;
-          case 'diamond':
-            img = gameAssets.blueDiamond;
-            fallbackColor = '#B9F2FF';
-            break;
-          case 'stone':
-          case 'coal':
-            img = gameAssets.grayStone;
-            fallbackColor = obj.type === 'stone' ? '#8B7355' : '#2F2F2F';
-            break;
-        }
-      }
+      // 使用新的代码绘制游戏物体
+      drawGameObject(ctx, obj.type, obj.x, obj.y, obj.size);
       
-      if (img) {
-        // 绘制物体图片
-        const imgSize = obj.size;
-        ctx.globalAlpha = 1.0;
-        ctx.drawImage(
-          img,
-          obj.x - imgSize / 2,
-          obj.y - imgSize / 2,
-          imgSize,
-          imgSize
-        );
-        
-        // 绘制发光效果（适用于金块和钻石）
-        if (obj.type === 'gold' || obj.type === 'diamond') {
-          ctx.globalAlpha = 0.3;
-          ctx.shadowColor = obj.type === 'gold' ? '#FFD700' : '#87CEEB';
-          ctx.shadowBlur = 15;
-          ctx.drawImage(
-            img,
-            obj.x - imgSize / 2,
-            obj.y - imgSize / 2,
-            imgSize,
-            imgSize
-          );
-          ctx.shadowBlur = 0;
-        }
-      } else {
-        // 备用图形绘制
-        ctx.fillStyle = fallbackColor;
-        ctx.beginPath();
-        ctx.arc(obj.x, obj.y, obj.size / 2, 0, Math.PI * 2);
-        ctx.fill();
-        
-        ctx.strokeStyle = '#000000';
-        ctx.lineWidth = 2;
-        ctx.stroke();
-        
-        if (obj.type === 'gold' || obj.type === 'diamond') {
-          ctx.fillStyle = 'rgba(255, 255, 255, 0.6)';
-          ctx.beginPath();
-          ctx.arc(obj.x - obj.size / 6, obj.y - obj.size / 6, obj.size / 6, 0, Math.PI * 2);
-          ctx.fill();
-        }
+      // 为高价值物品添加闪烁效果
+      if (obj.type === 'gold' || obj.type === 'diamond') {
+        drawSparkle(ctx, obj.x, obj.y, obj.size, time);
       }
       
       // 绘制价值标签
-      ctx.globalAlpha = 1.0;
-      ctx.fillStyle = '#FFFFFF';
-      ctx.strokeStyle = '#000000';
-      ctx.lineWidth = 2;
-      ctx.font = 'bold 12px Arial';
+      ctx.save();
+      const labelY = obj.y + obj.size / 2 + 15;
+      const labelText = `$${obj.value}`;
+      ctx.font = 'bold 14px Arial';
       ctx.textAlign = 'center';
-      ctx.strokeText(`$${obj.value}`, obj.x, obj.y + obj.size / 2 + 15);
-      ctx.fillText(`$${obj.value}`, obj.x, obj.y + obj.size / 2 + 15);
+      ctx.textBaseline = 'middle';
+      const textWidth = ctx.measureText(labelText).width;
+      
+      // 标签背景框
+      ctx.fillStyle = 'rgba(0, 0, 0, 0.7)';
+      ctx.fillRect(obj.x - textWidth/2 - 5, labelY - 10, textWidth + 10, 20);
+      
+      // 标签文字
+      ctx.fillStyle = '#FFFFFF';
+      ctx.fillText(labelText, obj.x, labelY);
+      ctx.restore();
       
       ctx.restore();
     });
-  }, [gameAssets, assetsLoaded]);
+  }, []);
 
   // 绘制钩子（使用新的钩子图片并支持旋转）
   const drawHook = useCallback((ctx: CanvasRenderingContext2D, player: Player, customStartX?: number, customStartY?: number) => {
@@ -356,49 +312,19 @@ export const GameCanvas: React.FC<GameCanvasProps> = ({ walletAddress }) => {
     // 如果抓到物体，绘制物体
     if (hook.caughtObject) {
       const obj = hook.caughtObject;
-      let img: HTMLImageElement | null = null;
-      
-      if (gameAssets && assetsLoaded) {
-        switch (obj.type) {
-          case 'gold':
-            img = gameAssets.goldNugget;
-            break;
-          case 'diamond':
-            img = gameAssets.blueDiamond;
-            break;
-          case 'stone':
-          case 'coal':
-            img = gameAssets.grayStone;
-            break;
-        }
-      }
-      
       const objSize = obj.size * 0.8;
       const objOffset = 30; // 距离钩子的距离
       
-      if (img) {
-        ctx.drawImage(
-          img,
-          hook.x - objSize / 2,
-          hook.y + objOffset - objSize / 2,
-          objSize,
-          objSize
-        );
-      } else {
-        // 备用物体绘制
-        ctx.fillStyle = obj.type === 'gold' ? '#FFD700' : 
-                        obj.type === 'diamond' ? '#B9F2FF' :
-                        obj.type === 'stone' ? '#8B7355' : '#2F2F2F';
-        
-        ctx.beginPath();
-        ctx.arc(hook.x, hook.y + objOffset, objSize / 2, 0, Math.PI * 2);
-        ctx.fill();
-        ctx.stroke();
-      }
+      // 使用新的代码渲染器绘制抓取的物体
+      ctx.save();
+      ctx.translate(hook.x, hook.y + objOffset);
+      ctx.scale(0.8, 0.8); // 稍微缩小以适应钩子
+      drawGameObject(ctx, obj.type, 0, 0, obj.size);
+      ctx.restore();
     }
     
     ctx.restore();
-  }, [gameSettings, gameAssets, assetsLoaded, calculateHookAngle]);
+  }, [gameSettings, calculateHookAngle]);
 
   // 绘制玩家信息（使用矿工角色图片）
   const drawPlayerInfo = useCallback((ctx: CanvasRenderingContext2D, player: Player) => {
