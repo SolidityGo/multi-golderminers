@@ -14,20 +14,24 @@ export class GameEngine {
   private config: GameEngineConfig;
   private animationId: number | null = null;
   private lastTime = 0;
+  private swingTime = 0; // 用于追踪摆动时间
 
   constructor(config: GameEngineConfig) {
     this.config = config;
   }
 
   // 更新钩子摆动
-  updateHookSwing(hook: Hook, _deltaTime: number): Hook {
+  updateHookSwing(hook: Hook, deltaTime: number): Hook {
     if (!hook.isFiring && !hook.isRetracting) {
-      // 钩子摆动逻辑：使用正弦波模拟自然摆动
-      const time = Date.now() / 1000;
-      const swingAmplitude = Math.PI / 4; // 45度摆动范围
-      const swingFrequency = 1; // 摆动频率
+      // 累加摆动时间
+      this.swingTime += deltaTime;
       
-      const newAngle = Math.sin(time * swingFrequency) * swingAmplitude;
+      // 钩子摆动逻辑：使用正弦波模拟自然摆动
+      const swingAmplitude = Math.PI / 3; // 60度摆动范围（左右各30度）
+      const swingFrequency = this.config.hookSwingSpeed; // 摆动频率
+      
+      // 计算新角度（从垂直向下开始）
+      const newAngle = Math.sin(this.swingTime * swingFrequency) * swingAmplitude;
       
       // 计算钩子尖端位置
       const hookTipX = this.config.canvasWidth / 2 + Math.sin(newAngle) * hook.length;
@@ -227,17 +231,26 @@ export class GameEngine {
     updateCallback: (deltaTime: number) => void
   ): void {
     const gameLoop = (currentTime: number) => {
+      // 跳过第一帧，避免极大的 deltaTime
+      if (this.lastTime === 0) {
+        this.lastTime = currentTime;
+        this.animationId = requestAnimationFrame(gameLoop);
+        return;
+      }
+      
       const deltaTime = (currentTime - this.lastTime) / 1000; // 转换为秒
       this.lastTime = currentTime;
 
-      if (deltaTime < 0.1) { // 限制最大帧时间，避免跳跃
-        updateCallback(deltaTime);
+      // 限制 deltaTime 范围，避免跳跃
+      const clampedDeltaTime = Math.min(deltaTime, 0.1);
+      if (clampedDeltaTime > 0) {
+        updateCallback(clampedDeltaTime);
       }
 
       this.animationId = requestAnimationFrame(gameLoop);
     };
 
-    this.lastTime = performance.now();
+    this.lastTime = 0; // 重置为0，让第一帧被跳过
     this.animationId = requestAnimationFrame(gameLoop);
   }
 
@@ -246,6 +259,7 @@ export class GameEngine {
     if (this.animationId) {
       cancelAnimationFrame(this.animationId);
       this.animationId = null;
+      this.lastTime = 0; // 重置时间
     }
   }
 

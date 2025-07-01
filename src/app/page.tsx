@@ -6,45 +6,18 @@ import { RoomLobby } from '../components/RoomLobby';
 import { Leaderboard } from '../components/Leaderboard';
 import { WalletConnectButton } from '../components/WalletConnectButton';
 import { useGameStore } from '../stores/useGameStore';
-import { preloadGameAssets, createLoadingScreen, LoadingProgress } from '../utils/AssetLoader';
 import { useAccount } from 'wagmi';
 
 export default function HomePage() {
   const [isGameStarted, setIsGameStarted] = useState(false);
-  const [isPreloading, setIsPreloading] = useState(false);
-  const [preloadProgress, setPreloadProgress] = useState<LoadingProgress | null>(null);
   const { currentPlayer, players, addPlayer, setCurrentPlayer } = useGameStore();
   const { address, isConnected } = useAccount();
 
-  // 预加载游戏资源
-  const handlePreloadAssets = async (): Promise<boolean> => {
-    try {
-      setIsPreloading(true);
-      console.log('🎯 开始预加载游戏资源...');
-      
-      await preloadGameAssets((progress) => {
-        setPreloadProgress(progress);
-        console.log(`📦 预加载进度: ${progress.percentage}% - ${progress.currentAsset}`);
-      });
-      
-      console.log('✅ 游戏资源预加载完成！');
-      setIsPreloading(false);
-      setPreloadProgress(null);
-      return true;
-    } catch (error) {
-      console.error('❌ 游戏资源预加载失败:', error);
-      setIsPreloading(false);
-      setPreloadProgress(null);
-      return true;
-    }
-  };
 
   // 处理开始游戏
-  const handleStartGame = async () => {
-    const assetsLoaded = await handlePreloadAssets();
-    if (assetsLoaded) {
-      setIsGameStarted(true);
-    }
+  const handleStartGame = () => {
+    // 直接开始游戏，让 GameCanvas 组件处理10秒倒计时
+    setIsGameStarted(true);
   };
 
   // 当钱包连接状态改变时，自动创建或更新玩家
@@ -73,24 +46,6 @@ export default function HomePage() {
     }
   }, [isConnected, address, currentPlayer, addPlayer, setCurrentPlayer]);
 
-  // 在组件挂载时创建加载屏幕容器
-  useEffect(() => {
-    if (isPreloading && preloadProgress) {
-      const container = document.getElementById('loading-container');
-      if (container) {
-        createLoadingScreen(container, preloadProgress);
-      }
-    }
-  }, [isPreloading, preloadProgress]);
-
-  // 如果正在预加载，显示全屏加载界面
-  if (isPreloading) {
-    return (
-      <div id="loading-container" className="fixed inset-0 z-50">
-        {/* 加载屏幕通过 createLoadingScreen 函数动态创建 */}
-      </div>
-    );
-  }
 
   if (!isGameStarted) {
     return (

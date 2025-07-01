@@ -15,6 +15,7 @@ export const GameCanvas: React.FC<GameCanvasProps> = ({ walletAddress }) => {
   const [gameAssets, setGameAssets] = useState<GameAssets | null>(null);
   const [assetsLoaded, setAssetsLoaded] = useState(false);
   const [loadingProgress, setLoadingProgress] = useState(0);
+  const [loadingTimeLeft, setLoadingTimeLeft] = useState(3); // 3秒倒计时
   
   const {
     currentPlayer,
@@ -42,7 +43,23 @@ export const GameCanvas: React.FC<GameCanvasProps> = ({ walletAddress }) => {
     syncObjectCollected
   } = useMultisynqSync(walletAddress);
 
-  // 预加载游戏素材
+  // 3秒倒计时
+  useEffect(() => {
+    const timer = setInterval(() => {
+      setLoadingTimeLeft((prev) => {
+        if (prev <= 1) {
+          setAssetsLoaded(true);
+          console.log('⏰ 3秒倒计时结束，进入游戏');
+          return 0;
+        }
+        return prev - 1;
+      });
+    }, 1000);
+
+    return () => clearInterval(timer);
+  }, []);
+
+  // 预加载游戏素材（后台静默加载）
   useEffect(() => {
     const loadAssets = async () => {
       try {
@@ -54,15 +71,12 @@ export const GameCanvas: React.FC<GameCanvasProps> = ({ walletAddress }) => {
 
         if (validateAssets(assets)) {
           setGameAssets(assets);
-          setAssetsLoaded(true);
           console.log('✅ 游戏资源加载完成并验证通过！');
         } else {
           console.warn('⚠️ 部分资源加载失败，使用备用绘制');
-          setAssetsLoaded(true);
         }
       } catch (error) {
         console.error('❌ 资源加载失败:', error);
-        setAssetsLoaded(true); // 允许游戏运行，使用备用绘制
       }
     };
 
@@ -223,14 +237,14 @@ export const GameCanvas: React.FC<GameCanvasProps> = ({ walletAddress }) => {
     ropeGradient.addColorStop(1, '#654321');
     
     ctx.strokeStyle = ropeGradient;
-    ctx.lineWidth = 4;
+    ctx.lineWidth = 6; // 增加绳子粗细
     ctx.lineCap = 'round';
     
     // 绘制绳索阴影
     ctx.save();
     ctx.globalAlpha = 0.3;
     ctx.strokeStyle = '#000000';
-    ctx.lineWidth = 6;
+    ctx.lineWidth = 8; // 增加阴影粗细
     ctx.beginPath();
     ctx.moveTo(startX + 2, startY + 2);
     ctx.lineTo(hook.x + 2, hook.y + 2);
@@ -263,62 +277,80 @@ export const GameCanvas: React.FC<GameCanvasProps> = ({ walletAddress }) => {
     // 计算钩子旋转角度
     const hookAngle = calculateHookAngle(startX, startY, hook.x, hook.y);
     
-    // 绘制钩子
-    if (gameAssets?.hookSimple && assetsLoaded) {
-      const hookSize = 24;
-      
-      ctx.save();
-      ctx.translate(hook.x, hook.y);
-      ctx.rotate(hookAngle + Math.PI / 4); // 调整角度使钩子指向正确方向
-      
-      // 绘制钩子阴影
-      ctx.globalAlpha = 0.3;
-      ctx.drawImage(
-        gameAssets.hookSimple,
-        -hookSize / 2 + 2,
-        -hookSize / 2 + 2,
-        hookSize,
-        hookSize
-      );
-      
-      // 绘制主钩子
-      ctx.globalAlpha = 1.0;
-      ctx.drawImage(
-        gameAssets.hookSimple,
-        -hookSize / 2,
-        -hookSize / 2,
-        hookSize,
-        hookSize
-      );
-      
-      ctx.restore();
-    } else {
-      // 备用钩子绘制（带旋转）
-      ctx.save();
-      ctx.translate(hook.x, hook.y);
-      ctx.rotate(hookAngle);
-      
-      ctx.fillStyle = color;
-      ctx.strokeStyle = '#000000';
-      ctx.lineWidth = 2;
-      
-      // 钩子主体
-      ctx.beginPath();
-      ctx.arc(0, 0, 8, 0, Math.PI * 2);
-      ctx.fill();
-      ctx.stroke();
-      
-      // 钩子尖端
-      ctx.beginPath();
-      ctx.moveTo(8, 0);
-      ctx.lineTo(15, -6);
-      ctx.lineTo(15, 6);
-      ctx.closePath();
-      ctx.fill();
-      ctx.stroke();
-      
-      ctx.restore();
-    }
+    // 绘制钩子（使用代码绘制）
+    ctx.save();
+    ctx.translate(hook.x, hook.y);
+    ctx.rotate(hookAngle + Math.PI + Math.PI / 6 + Math.PI / 12); // 旋转使钩子垂直于绳子，再顺时针旋转90度，再加30度，再加15度
+    
+    // 钩子主体 - 金属质感
+    const metalGradient = ctx.createLinearGradient(-15, -15, 15, 15);
+    metalGradient.addColorStop(0, '#E6E6E6');
+    metalGradient.addColorStop(0.3, '#C0C0C0');
+    metalGradient.addColorStop(0.6, '#808080');
+    metalGradient.addColorStop(1, '#606060');
+    
+    // 绘制钩子阴影
+    ctx.save();
+    ctx.translate(2, 2);
+    ctx.globalAlpha = 0.3;
+    ctx.fillStyle = '#000000';
+    
+    // 钩子主体圆形
+    ctx.beginPath();
+    ctx.arc(0, 0, 10, 0, Math.PI * 2);
+    ctx.fill();
+    
+    // 钩子弯曲部分
+    ctx.beginPath();
+    ctx.moveTo(0, 10);
+    ctx.quadraticCurveTo(0, 20, -10, 25);
+    ctx.quadraticCurveTo(-15, 27, -18, 25);
+    ctx.quadraticCurveTo(-20, 23, -18, 20);
+    ctx.quadraticCurveTo(-16, 18, -12, 18);
+    ctx.quadraticCurveTo(-5, 18, 0, 10);
+    ctx.fill();
+    
+    ctx.restore();
+    
+    // 钩子主体
+    ctx.fillStyle = metalGradient;
+    ctx.strokeStyle = '#404040';
+    ctx.lineWidth = 1.5;
+    
+    // 主体圆形部分
+    ctx.beginPath();
+    ctx.arc(0, 0, 10, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.stroke();
+    
+    // 钩子弯曲部分（类似鱼钩形状）
+    ctx.beginPath();
+    ctx.moveTo(0, 10);
+    ctx.quadraticCurveTo(0, 20, -10, 25);
+    ctx.quadraticCurveTo(-15, 27, -18, 25);
+    ctx.quadraticCurveTo(-20, 23, -18, 20);
+    ctx.quadraticCurveTo(-16, 18, -12, 18);
+    ctx.quadraticCurveTo(-5, 18, 0, 10);
+    ctx.fill();
+    ctx.stroke();
+    
+    // 钩尖（锋利的尖端）
+    ctx.fillStyle = '#606060';
+    ctx.beginPath();
+    ctx.moveTo(-18, 20);
+    ctx.lineTo(-22, 15);
+    ctx.lineTo(-20, 23);
+    ctx.closePath();
+    ctx.fill();
+    ctx.stroke();
+    
+    // 高光效果
+    ctx.fillStyle = 'rgba(255, 255, 255, 0.6)';
+    ctx.beginPath();
+    ctx.arc(-3, -3, 4, 0, Math.PI * 2);
+    ctx.fill();
+    
+    ctx.restore();
     
     // 如果抓到物体，绘制物体
     if (hook.caughtObject) {
@@ -431,31 +463,44 @@ export const GameCanvas: React.FC<GameCanvasProps> = ({ walletAddress }) => {
     ctx.fillStyle = gradient;
     ctx.fillRect(0, 0, canvasWidth, canvasHeight);
     
-    // 加载文本
+    // 标题
     ctx.fillStyle = '#FFFFFF';
-    ctx.font = 'bold 24px Arial';
+    ctx.font = 'bold 36px Arial';
     ctx.textAlign = 'center';
-    ctx.fillText('正在加载游戏资源...', canvasWidth / 2, canvasHeight / 2 - 40);
+    ctx.fillText('⛏️ 黄金矿工', canvasWidth / 2, canvasHeight / 2 - 80);
     
-    // 进度条
-    const barWidth = 300;
-    const barHeight = 20;
-    const barX = (canvasWidth - barWidth) / 2;
-    const barY = canvasHeight / 2;
+    // 倒计时圆圈
+    const centerX = canvasWidth / 2;
+    const centerY = canvasHeight / 2;
+    const radius = 60;
     
-    // 进度条背景
-    ctx.fillStyle = 'rgba(255, 255, 255, 0.3)';
-    ctx.fillRect(barX, barY, barWidth, barHeight);
+    // 背景圆圈
+    ctx.strokeStyle = 'rgba(255, 255, 255, 0.3)';
+    ctx.lineWidth = 8;
+    ctx.beginPath();
+    ctx.arc(centerX, centerY, radius, 0, Math.PI * 2);
+    ctx.stroke();
     
-    // 进度条填充
-    ctx.fillStyle = '#10b981';
-    ctx.fillRect(barX, barY, (barWidth * loadingProgress) / 100, barHeight);
+    // 进度圆圈
+    const progress = (3 - loadingTimeLeft) / 3;
+    ctx.strokeStyle = '#10b981';
+    ctx.lineWidth = 8;
+    ctx.beginPath();
+    ctx.arc(centerX, centerY, radius, -Math.PI / 2, -Math.PI / 2 + (Math.PI * 2 * progress));
+    ctx.stroke();
     
-    // 进度文本
+    // 倒计时数字
     ctx.fillStyle = '#FFFFFF';
-    ctx.font = '16px Arial';
-    ctx.fillText(`${loadingProgress}%`, canvasWidth / 2, barY + barHeight + 30);
-  }, [gameSettings, loadingProgress]);
+    ctx.font = 'bold 48px Arial';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText(loadingTimeLeft.toString(), centerX, centerY);
+    
+    // 提示文本
+    ctx.font = '20px Arial';
+    ctx.textBaseline = 'alphabetic';
+    ctx.fillText('游戏即将开始...', centerX, centerY + 100);
+  }, [gameSettings, loadingTimeLeft]);
 
   // 主渲染函数
   const render = useCallback(() => {
@@ -467,7 +512,7 @@ export const GameCanvas: React.FC<GameCanvasProps> = ({ walletAddress }) => {
     ctx.clearRect(0, 0, gameSettings.canvasWidth, gameSettings.canvasHeight);
     
     if (!assetsLoaded) {
-      // 显示加载屏幕
+      // 显示3秒倒计时加载屏幕
       drawLoadingScreen(ctx);
       return;
     }

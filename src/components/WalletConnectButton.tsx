@@ -21,8 +21,8 @@ export const WalletConnectButton: React.FC = () => {
     const loadAssets = async () => {
       try {
         const [button, character] = await Promise.all([
-          loadImage('/images/action-button.png'),
-          loadImage('/images/miner-character.png'),
+          loadImage('/images/action-button.jpg'),
+          loadImage('/images/miner-character.jpg'),
         ]);
         setActionButton(button);
         setMinerCharacter(character);

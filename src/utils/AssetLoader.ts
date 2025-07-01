@@ -4,7 +4,6 @@ export interface GameAssets {
   goldNugget: HTMLImageElement;
   blueDiamond: HTMLImageElement;
   grayStone: HTMLImageElement;
-  hookSimple: HTMLImageElement;
   minerCharacter: HTMLImageElement;
   actionButton: HTMLImageElement;
   backpackIcon: HTMLImageElement;
@@ -24,7 +23,6 @@ const ASSET_PATHS: Record<keyof GameAssets, string> = {
   goldNugget: '/images/gold-nugget.jpg',
   blueDiamond: '/images/blue-diamond.jpg',
   grayStone: '/images/gray-stone.jpg',
-  hookSimple: '/images/hook-simple.jpg',
   minerCharacter: '/images/miner-character.jpg',
   actionButton: '/images/action-button.jpg',
   backpackIcon: '/images/backpack-icon.jpg',

@@ -22,8 +22,8 @@ export const Leaderboard: React.FC = () => {
     const loadAssets = async () => {
       try {
         const [panel, backpack] = await Promise.all([
-          loadImage('/images/leaderboard-panel.png'),
-          loadImage('/images/backpack-icon.png'),
+          loadImage('/images/leaderboard-panel.jpg'),
+          loadImage('/images/backpack-icon.jpg'),
         ]);
         setLeaderboardPanel(panel);
         setBackpackIcon(backpack);

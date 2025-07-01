@@ -75,11 +75,11 @@ export const useGameStore = create<GameState>()((set, _get) => ({
   gameObjects: [],
   
   gameSettings: {
-    canvasWidth: 800,
-    canvasHeight: 600,
+    canvasWidth: 1200,
+    canvasHeight: 800,
     gravity: 0.5,
-    hookSpeed: 200, // 像素/秒
-    maxHookLength: 400,
+    hookSpeed: 300, // 像素/秒
+    maxHookLength: 600,
   },
   
   isGameStarted: false,
